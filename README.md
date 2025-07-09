@@ -208,6 +208,11 @@ The final phase focused on implementing real-time communication and performing l
 ## Credits
 
 Created By -Nima Ghaffari
-[![portfolio](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/nimaghaffari001)
+
+---
+
+Pv : [![portfolio](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/nimaghaffari001)
+
+Channel : [![portfolio](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/CallMeNiMChe)
 
 ---
