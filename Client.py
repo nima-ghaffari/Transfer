@@ -12,7 +12,6 @@ import sys
 FONT_FAMILY = "Berlin Sans FB Demi"
 FONT_NORMAL = (FONT_FAMILY, 10)
 FONT_BOLD = (FONT_FAMILY, 11, "bold")
-# <<< فونت جدید برای خوانایی بهتر کادر ورود IP
 FONT_MONO = ("Consolas", 11)
 
 COLOR_BACKGROUND = "#000F08"
@@ -43,6 +42,7 @@ class ClientGUI(tk.Tk):
         self.is_connected = False
         self.checkbuttons = {}
         self.full_file_list = []
+        self.ip_var = tk.StringVar()
 
         self.save_directory_var = tk.StringVar(value="Please select a base save folder...")
         self.use_new_folder_var = tk.BooleanVar(value=False)
@@ -83,8 +83,8 @@ class ClientGUI(tk.Tk):
         conn_frame.pack(fill=tk.X)
 
         ttk.Label(conn_frame, text="Server IP:").pack(side=tk.LEFT, padx=(0,5))
-        # <<< اعمال فونت جدید به کادر ورود IP >>>
-        self.ip_input = ttk.Entry(conn_frame, width=15, font=FONT_MONO)
+        self.ip_input = ttk.Entry(conn_frame, width=15, font=FONT_MONO, textvariable=self.ip_var)
+        self.ip_var.trace_add("write", self.format_ip_as_typed)
         self.ip_input.insert(0, "127.0.0.1")
         self.ip_input.pack(side=tk.LEFT, padx=5)
 
@@ -174,6 +174,47 @@ class ClientGUI(tk.Tk):
 
         self.back_btn = ttk.Button(exit_frame, text="↩️ Back to Launcher", command=self.go_to_launcher)
         self.back_btn.pack(side=tk.LEFT, padx=5)
+
+    def format_ip_as_typed(self, *args):
+        current_text = self.ip_var.get()
+        cursor_pos = self.ip_input.index(tk.INSERT)
+        
+        # Sanitize input: allow only digits and dots
+        sanitized_text = "".join(filter(lambda char: char.isdigit() or char == '.', current_text))
+        
+        # Prevent multiple dots
+        while ".." in sanitized_text:
+            sanitized_text = sanitized_text.replace("..", ".")
+        
+        parts = sanitized_text.split('.')
+        
+        # Limit each part to 3 digits and value to 255
+        formatted_parts = []
+        for part in parts:
+            if len(part) > 3:
+                part = part[:3]
+            if part and int(part) > 255:
+                part = "255"
+            formatted_parts.append(part)
+        
+        # Limit to 4 parts
+        formatted_parts = formatted_parts[:4]
+        
+        # Auto-add dot if an octet is complete and it's not the last one
+        final_text = ""
+        for i, part in enumerate(formatted_parts):
+            final_text += part
+            if len(part) == 3 and i < 3:
+                final_text += "."
+            elif len(part) < 3 and i < len(formatted_parts) - 1:
+                final_text += "."
+        
+        # Update the entry only if text has changed
+        if final_text != current_text:
+            self.ip_var.set(final_text)
+            # Try to restore cursor position
+            if cursor_pos < len(final_text):
+                self.ip_input.icursor(cursor_pos)
 
     def set_download_button_to_retry(self):
         self.download_btn.config(text="🔄 Retry Download", command=self.retry_download, state='normal')
@@ -273,19 +314,14 @@ class ClientGUI(tk.Tk):
 
     def create_new_folder(self):
         base_directory = self.save_directory_var.get()
-        if "Please select" in base_directory:
-            messagebox.showerror("Error", "Please select a base save folder first.")
-            return
+        if "Please select" in base_directory: messagebox.showerror("Error", "Please select a base save folder first."); return
         new_folder_name = self.new_folder_name_entry.get()
-        if not new_folder_name:
-            messagebox.showerror("Error", "Please enter a name for the new folder.")
-            return
+        if not new_folder_name: messagebox.showerror("Error", "Please enter a name for the new folder."); return
         full_path = os.path.join(base_directory, new_folder_name)
         try:
             os.makedirs(full_path, exist_ok=True)
             self.specific_download_path = full_path
-            self.new_folder_name_entry.config(state='disabled')
-            self.create_folder_btn.config(state='disabled')
+            self.new_folder_name_entry.config(state='disabled'); self.create_folder_btn.config(state='disabled')
             messagebox.showinfo("Success", f"Folder created at:\n{full_path}\nYou can now download into this folder.")
         except Exception as e: messagebox.showerror("Folder Creation Error", f"Could not create the folder: {e}")
 
@@ -310,14 +346,9 @@ class ClientGUI(tk.Tk):
 
     def start_download(self):
         selected_files = [f for f, v in self.checkbuttons.items() if v.get()]
-        if not selected_files:
-            messagebox.showwarning("Warning", "Please select at least one file.")
-            return
-        
+        if not selected_files: messagebox.showwarning("Warning", "Please select at least one file."); return
         save_path = self.get_save_path()
-        if not save_path:
-            return
-
+        if not save_path: return
         self.last_download_info = {"files": selected_files, "path": save_path}
         self.download_btn.config(state='disabled')
         threading.Thread(target=self.download_worker, args=(selected_files, save_path), daemon=True).start()
@@ -346,9 +377,7 @@ class ClientGUI(tk.Tk):
 
     def download_single_file(self, filename):
         header = self._recv_until_newline()
-        try:
-            filename_from_server, filesize_str = header.strip().split(':', 1)
-            filesize = int(filesize_str)
+        try: filename_from_server, filesize_str = header.strip().split(':', 1); filesize = int(filesize_str)
         except ValueError: raise ValueError(f"Invalid header from server: {header}")
         self.update_status(f"Downloading: {filename_from_server}", COLOR_ACCENT_ACTIVE)
         buffer = io.BytesIO()
@@ -390,12 +419,9 @@ class ClientGUI(tk.Tk):
         self.download_btn.config(state='disabled')
         if self.chat_window: self.chat_window.destroy(); self.chat_window = None
         self.chat_btn.config(state='disabled')
-        self.progress_bar['value'] = 0
-        self.progress_label.config(text="")
+        self.progress_bar['value'] = 0; self.progress_label.config(text="")
         self.update_exit_button_style()
-        self.ip_input.config(state='normal')
-        self.port_input.config(state='normal')
-        self.password_input.config(state='disabled')
+        self.ip_input.config(state='normal'); self.port_input.config(state='normal'); self.password_input.config(state='disabled')
 
     def browse_default_directory(self):
         directory = filedialog.askdirectory(title="Select Default Download Folder")
@@ -410,23 +436,16 @@ class ClientGUI(tk.Tk):
 
     def populate_file_list(self, file_list):
         for widget in self.scrollable_frame.winfo_children(): widget.destroy()
-        self.checkbuttons.clear()
-        self.select_all_var.set(False)
+        self.checkbuttons.clear(); self.select_all_var.set(False)
         for filename in file_list:
             var = tk.BooleanVar()
             cb = ttk.Checkbutton(self.scrollable_frame, text=filename, variable=var)
             cb.pack(anchor='w', padx=10, pady=2, fill='x')
             self.checkbuttons[filename] = var
 
-    def update_status(self, message, color):
-        self.after(0, lambda: self.status_label.config(text=message, foreground=color))
-
-    def update_progress(self, value, text):
-        self.after(0, lambda: self._update_progress_gui(value, text))
-
-    def _update_progress_gui(self, value, text):
-        self.progress_bar['value'] = value
-        self.progress_label.config(text=text)
+    def update_status(self, message, color): self.after(0, lambda: self.status_label.config(text=message, foreground=color))
+    def update_progress(self, value, text): self.after(0, lambda: self._update_progress_gui(value, text))
+    def _update_progress_gui(self, value, text): self.progress_bar['value'] = value; self.progress_label.config(text=text)
 
     def connect_chat(self):
         try:
@@ -490,8 +509,7 @@ class ClientGUI(tk.Tk):
             display = self.chat_window.chat_display
             display.config(state='normal')
             display.insert(tk.END, f"[{sender}]: {message}\n")
-            display.config(state='disabled')
-            display.see(tk.END)
+            display.config(state='disabled'); display.see(tk.END)
     
     def send_chat_message(self, message):
         if self.chat_socket:
