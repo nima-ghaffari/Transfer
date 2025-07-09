@@ -211,8 +211,27 @@ Created By -Nima Ghaffari
 
 ---
 
-Pv : [![portfolio](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/nimaghaffari001)
-
-Channel : [![portfolio](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/CallMeNiMChe)
+<table>
+  <tr>
+    <td align="right" valign="middle">
+      <h3 style="margin: 0;">Pv :</h3>
+    </td>
+    <td valign="middle">
+      <a href="https://t.me/nimaghaffari001">
+        <img src="https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram PV">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="right" valign="middle">
+      <h3 style="margin: 0;">Channel :</h3>
+    </td>
+    <td valign="middle">
+      <a href="https://t.me/CallMeNiMChe">
+        <img src="https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram Channel">
+      </a>
+    </td>
+  </tr>
+</table>
 
 ---
