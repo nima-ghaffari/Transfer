@@ -12,7 +12,6 @@ import pandas as pd
 import http.server
 import socketserver
 
-# --- Constants ---
 FONT_FAMILY = "Segoe UI"
 FONT_NORMAL = (FONT_FAMILY, 9)
 FONT_BOLD = (FONT_FAMILY, 10, "bold")
@@ -31,14 +30,12 @@ COLOR_STATUS_RUNNING = "#1AAE95"
 COLOR_STATUS_STOPPED = "#C74242"
 COLOR_DANGER = "#D32F2F"
 
-# --- Protocol Commands ---
 CMD_LIST_FILES = "LIST_FILES"
 CMD_DOWNLOAD_FILES = "DOWNLOAD_FILES"
 PREFIX_MSG_C2S = "MSG_C2S:"
 PREFIX_MSG_S2C = "MSG_S2C:"
 PREFIX_WARN_S2C = "WARN_S2C:"
 
-# --- Helper Classes ---
 class SecureHTTPServer(http.server.HTTPServer):
     def __init__(self, server_address, HandlerClass, ssl_context):
         super().__init__(server_address, HandlerClass)
@@ -113,9 +110,9 @@ class ServerGUI(tk.Tk):
         control_tab = ttk.Frame(self.notebook, padding=10)
         management_tab = ttk.Frame(self.notebook, padding=10)
         chat_tab = ttk.Frame(self.notebook, padding=10)
-        self.notebook.add(control_tab, text=' ⚙️  Control Panel  ')
-        self.notebook.add(management_tab, text=' 👥  Client Management  ')
-        self.notebook.add(chat_tab, text=' 💬  Chats  ')
+        self.notebook.add(control_tab, text=' ⚙️  Control Panel  ')
+        self.notebook.add(management_tab, text=' 👥  Client Management  ')
+        self.notebook.add(chat_tab, text=' 💬  Chats  ')
         self.notebook.bind("<<TNotebookTabChanged>>", self.on_tab_changed)
         self.create_control_tab(control_tab)
         self.create_management_tab(management_tab)
@@ -151,8 +148,17 @@ class ServerGUI(tk.Tk):
         if self.server.running:
             messagebox.showwarning("Server is Running", "Please stop the server before going back to the launcher.")
             return
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        launcher_path = os.path.join(current_dir, "launcher.py")
+
         self.destroy()
-        subprocess.run([sys.executable, "launcher.py"])
+        try:
+            subprocess.run([sys.executable, launcher_path], check=True)
+        except FileNotFoundError:
+            messagebox.showerror("Error", f"Launcher.py not found at: {launcher_path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to launch launcher.py: {e}")
 
     def create_control_tab(self, tab):
         tab.columnconfigure(0, weight=1)
@@ -561,17 +567,60 @@ class FileServer:
                 command = command_bytes.decode()
                 if command == CMD_LIST_FILES:
                     self.gui.update_client_status(client_ip, "Listing files")
-                    files = [f for f in os.listdir(self.shared_path) if os.path.isfile(os.path.join(self.shared_path, f))] if self.share_mode == 'directory' else [os.path.basename(self.shared_path)]
+                    files = []
+                    if self.share_mode == 'directory':
+                        for root, _, fnames in os.walk(self.shared_path):
+                            for fname in fnames:
+                                relative_path = os.path.relpath(os.path.join(root, fname), self.shared_path)
+                                files.append(relative_path.replace("\\", "/")) # Ensure forward slashes for cross-platform
+                    else: # share_mode == 'file'
+                        files = [os.path.basename(self.shared_path)]
+                    
                     client_socket.sendall(json.dumps(files).encode('utf-8'))
                     self.gui.update_client_status(client_ip, "Idle")
                 elif command == CMD_DOWNLOAD_FILES:
                     requested_files = json.loads(client_socket.recv(4096).decode('utf-8'))
                     self.gui.log_event("File Transfer", client_ip, f"Requested {len(requested_files)} file(s).")
                     for filename in requested_files:
-                        if os.path.basename(filename) != filename: continue
-                        abs_shared, req_path = os.path.abspath(self.shared_path), os.path.join(os.path.abspath(self.shared_path), filename)
-                        if self.share_mode == 'file': req_path = abs_shared
-                        if not os.path.abspath(req_path).startswith(abs_shared) or not os.path.isfile(req_path): continue
+                        
+                        # --- IMPORTANT SECURITY CONSIDERATION ---
+                        # This section is modified to allow downloading files from subdirectories
+                        # based on the relative path provided by the client.
+                        # It is CRUCIAL that 'filename' coming from the client is a CLEAN, RELATIVE path
+                        # without any '..' (path traversal) components.
+                        # The os.path.normpath and startswith check below help mitigate this,
+                        # but careful client-side behavior is also needed.
+
+                        file_full_path = os.path.abspath(os.path.join(self.shared_path, filename))
+                        
+                        # If sharing a single file, only that specific file can be downloaded
+                        if self.share_mode == 'file':
+                            if file_full_path != os.path.abspath(self.shared_path):
+                                self.gui.log_event("Security Alert", client_ip, f"Attempted to download file outside shared single file: {filename}")
+                                continue
+                            filename = os.path.basename(self.shared_path) # Ensure client gets the correct name
+                        else: # directory mode
+                            # Prevent path traversal: ensure the requested file is actually within the shared_path directory
+                            # This is the crucial part for cross-drive/subdirectory access IF they are children of shared_path
+                            
+                            # Normalize path to resolve '..' and other redundant components
+                            normalized_shared_path = os.path.normpath(self.shared_path)
+                            normalized_file_full_path = os.path.normpath(file_full_path)
+
+                            # Check if the requested file path starts with the shared directory path
+                            # This should allow subdirectories within the shared folder, even if on another drive.
+                            if not normalized_file_full_path.startswith(normalized_shared_path):
+                                self.gui.log_event("Security Alert", client_ip, f"Attempted path traversal: {filename}")
+                                continue
+                            
+                            # Ensure it's a file and accessible
+                            if not os.path.isfile(file_full_path):
+                                self.gui.log_event("File Transfer", client_ip, f"Requested non-existent or directory: {filename}")
+                                continue
+                        # --- END SECURITY CONSIDERATION ---
+
+                        req_path = file_full_path # Use the validated full path
+                        
                         self.gui.update_client_status(client_ip, "Downloading"); self.gui.update_client_file(client_ip, filename)
                         filesize = os.path.getsize(req_path)
                         client_socket.sendall(f"{filename}:{filesize}\n".encode('utf-8'))
