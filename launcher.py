@@ -83,11 +83,14 @@ class AppLauncher(tk.Tk):
         client_btn.pack(pady=10)
         
     def run_app(self, script_name):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(current_dir, script_name)
+
         self.destroy()
         try:
-            subprocess.run([sys.executable, script_name], check=True)
+            subprocess.run([sys.executable, script_path], check=True)
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            print(f"Failed to launch {script_name}: {e}")
+            print(f"Failed to launch {script_path}: {e}")
             app = AppLauncher()
             app.mainloop()
 

@@ -12,7 +12,6 @@ import pandas as pd
 import http.server
 import socketserver
 
-# --- Constants ---
 FONT_FAMILY = "Segoe UI"
 FONT_NORMAL = (FONT_FAMILY, 9)
 FONT_BOLD = (FONT_FAMILY, 10, "bold")
@@ -31,14 +30,12 @@ COLOR_STATUS_RUNNING = "#1AAE95"
 COLOR_STATUS_STOPPED = "#C74242"
 COLOR_DANGER = "#D32F2F"
 
-# --- Protocol Commands ---
 CMD_LIST_FILES = "LIST_FILES"
 CMD_DOWNLOAD_FILES = "DOWNLOAD_FILES"
 PREFIX_MSG_C2S = "MSG_C2S:"
 PREFIX_MSG_S2C = "MSG_S2C:"
 PREFIX_WARN_S2C = "WARN_S2C:"
 
-# --- Helper Classes ---
 class SecureHTTPServer(http.server.HTTPServer):
     def __init__(self, server_address, HandlerClass, ssl_context):
         super().__init__(server_address, HandlerClass)
@@ -113,9 +110,9 @@ class ServerGUI(tk.Tk):
         control_tab = ttk.Frame(self.notebook, padding=10)
         management_tab = ttk.Frame(self.notebook, padding=10)
         chat_tab = ttk.Frame(self.notebook, padding=10)
-        self.notebook.add(control_tab, text=' ⚙️  Control Panel  ')
-        self.notebook.add(management_tab, text=' 👥  Client Management  ')
-        self.notebook.add(chat_tab, text=' 💬  Chats  ')
+        self.notebook.add(control_tab, text=' ⚙️  Control Panel  ')
+        self.notebook.add(management_tab, text=' 👥  Client Management  ')
+        self.notebook.add(chat_tab, text=' 💬  Chats  ')
         self.notebook.bind("<<TNotebookTabChanged>>", self.on_tab_changed)
         self.create_control_tab(control_tab)
         self.create_management_tab(management_tab)
@@ -151,8 +148,17 @@ class ServerGUI(tk.Tk):
         if self.server.running:
             messagebox.showwarning("Server is Running", "Please stop the server before going back to the launcher.")
             return
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        launcher_path = os.path.join(current_dir, "launcher.py")
+
         self.destroy()
-        subprocess.run([sys.executable, "launcher.py"])
+        try:
+            subprocess.run([sys.executable, launcher_path], check=True)
+        except FileNotFoundError:
+            messagebox.showerror("Error", f"Launcher.py not found at: {launcher_path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to launch launcher.py: {e}")
 
     def create_control_tab(self, tab):
         tab.columnconfigure(0, weight=1)

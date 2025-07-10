@@ -179,16 +179,13 @@ class ClientGUI(tk.Tk):
         current_text = self.ip_var.get()
         cursor_pos = self.ip_input.index(tk.INSERT)
         
-        # Sanitize input: allow only digits and dots
         sanitized_text = "".join(filter(lambda char: char.isdigit() or char == '.', current_text))
         
-        # Prevent multiple dots
         while ".." in sanitized_text:
             sanitized_text = sanitized_text.replace("..", ".")
         
         parts = sanitized_text.split('.')
         
-        # Limit each part to 3 digits and value to 255
         formatted_parts = []
         for part in parts:
             if len(part) > 3:
@@ -197,10 +194,8 @@ class ClientGUI(tk.Tk):
                 part = "255"
             formatted_parts.append(part)
         
-        # Limit to 4 parts
         formatted_parts = formatted_parts[:4]
         
-        # Auto-add dot if an octet is complete and it's not the last one
         final_text = ""
         for i, part in enumerate(formatted_parts):
             final_text += part
@@ -209,10 +204,8 @@ class ClientGUI(tk.Tk):
             elif len(part) < 3 and i < len(formatted_parts) - 1:
                 final_text += "."
         
-        # Update the entry only if text has changed
         if final_text != current_text:
             self.ip_var.set(final_text)
-            # Try to restore cursor position
             if cursor_pos < len(final_text):
                 self.ip_input.icursor(cursor_pos)
 
@@ -236,13 +229,26 @@ class ClientGUI(tk.Tk):
         return data.decode('utf-8').strip()
 
     def go_to_launcher(self):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        launcher_path = os.path.join(current_dir, "launcher.py")
+
         if self.is_connected and messagebox.askyesno("Confirm Navigation", "You are currently connected. \nDisconnect and return to launcher?"):
             self.disconnect_from_server()
             self.destroy()
-            subprocess.run([sys.executable, "launcher.py"])
+            try:
+                subprocess.run([sys.executable, launcher_path], check=True)
+            except FileNotFoundError:
+                messagebox.showerror("Error", f"Launcher.py not found at: {launcher_path}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to launch launcher.py: {e}")
         elif not self.is_connected:
             self.destroy()
-            subprocess.run([sys.executable, "launcher.py"])
+            try:
+                subprocess.run([sys.executable, launcher_path], check=True)
+            except FileNotFoundError:
+                messagebox.showerror("Error", f"Launcher.py not found at: {launcher_path}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to launch launcher.py: {e}")
 
     def connect_to_server(self):
         ip, port_str = self.ip_input.get(), self.port_input.get()
@@ -307,6 +313,7 @@ class ClientGUI(tk.Tk):
             self.ip_input.config(state='disabled')
             self.port_input.config(state='disabled')
             self.password_input.config(state='disabled')
+            self.chat_btn.config(state='normal')
             self.connect_chat()
         except Exception as e:
             self.update_status(f"Connection Failed: {e}", COLOR_ERROR)
