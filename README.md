@@ -215,7 +215,7 @@ Created By -Nima Ghaffari
   <a href="https://t.me/nimaghaffari001" style="margin-right: 10px;">
     <img src="https://img.shields.io/badge/Private%20Message-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram PV">
   </a>
-  <a href="https://t.me/CallMeNiMChe">
+  <a href="https://t.me/NimaGhaffari01">
     <img src="https://img.shields.io/badge/Telegram%20Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram Channel">
   </a>
 </p>
